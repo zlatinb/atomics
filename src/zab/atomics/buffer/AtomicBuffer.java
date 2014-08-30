@@ -41,6 +41,10 @@ public class AtomicBuffer {
 	private int getWritten(long state) {
 		return (int)((state & writtenMask) >> (MAX_SIZE << 1));
 	}
+	
+	private long encode(int read, int claim, int write) {
+	    return read | (claim << MAX_SIZE) | (write << (MAX_SIZE <<1));
+	}
 
 	/**
 	 * put bytes into this buffer.  If the buffer is full, return false
@@ -48,17 +52,65 @@ public class AtomicBuffer {
 	 * @return true if all bytes were successfully put in the buffer
 	 */
 	public boolean put(byte[] src) {
-		// TODO: implement
-		return false;
+	    // 1st claim space
+	    int startPos;
+	    while(true) {
+	        final long s = state.get();
+	        final int read = getRead(s);
+	        final int write = getWritten(s);
+	        final int claim = getClaimed(s);
+	        
+	        assert read <= write && write <= claim;
+	        
+	        if (claim + write + src.length > data.length )
+	            return false;
+	        
+	        final int newClaim = claim + src.length;
+	        final long claimState = encode(read, newClaim, write);
+	        if (state.compareAndSet(s,claimState)) {
+	            startPos = claim;
+	            break;
+	        }
+	    }
+	    
+	    // then write in the claimed space
+	    while(true) {
+	        final long s = state.get();
+            final int read = getRead(s);
+            final int write = getWritten(s);
+            final int claim = getClaimed(s);
+            assert read <= write && write <= claim;
+            
+            // spin until all other writers catch with us
+            if (write < startPos)
+                continue;
+            
+            final int newWrite = write + src.length;
+            System.arraycopy(src,0,data, startPos, src.length);
+            final long newState = encode(read,claim,newWrite);
+            if (state.compareAndSet(s,newState))
+                return true;
+	    }
 	}
 
 	public int get(byte[] dest) {
-		// TODO: implement
-		return 0;
-	}
-	
-	public static void main(String []ar) {
-	    AtomicBuffer ab = new AtomicBuffer(20);
-	    System.out.printf("%x %x %x\n", ab.readMask, ab.claimMask, ab.writtenMask);
+	    while(true) {
+	        final long s = state.get();
+	        final int read = getRead(s);
+	        final int write = getWritten(s);
+	        final int claim = getClaimed(s);
+	        assert read <= write && write <= claim;
+	        
+	        System.arraycopy(data, read, dest, 0, write - read);
+	        
+	        long newState;
+	        if (write == claim)
+	            newState = 0;
+	        else
+	            newState = encode(write,claim,write);
+	        
+	        if (state.compareAndSet(s,newState))
+	            return write - read;
+	    }
 	}
 }
