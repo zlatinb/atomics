@@ -83,13 +83,23 @@ public class AtomicBag<T> {
     }
     
     /**
+     * @param items to store in the bag
+     * @return how many were stored
+     */
+    public int store(T[] items) {
+        return store(items, 0, items.length);
+    }
+    
+    /**
      * Bulk store operation.  More efficient than calling
      * store() multiple times.
+     * 
      * @param items to store
+     * @param start index within the array where to start
      * @param num how many of them, starting at 0
      * @return number actually stored
      */
-    public int store(final T[] items, int num) {
+    public int store(final T[] items, final int start, int num) {
         num = Math.min(32,num);
         
         // find free slots
@@ -119,7 +129,7 @@ public class AtomicBag<T> {
         for (int i = 0; i < 32 && stored < found; i++) {
             if ((slots & ( 1 << i)) == 0)
                 continue;
-            storage[i] = items[stored++];
+            storage[i] = items[start + stored++];
             storedMask = full(storedMask,i);
         }
         
