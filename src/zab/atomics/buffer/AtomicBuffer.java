@@ -3,11 +3,13 @@ package zab.atomics.buffer;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * A buffer that is safe to use by multiple threads.  It has maximum capacity of 2MB.
+ * A buffer that is safe to use by multiple threads.  It has maximum capacity of 2^21 = 2MB.
  * 
- * It is guaranteed wait-free if there is only one writing thread.  If there are more,
- * there can sometimes be a wait.  You can pass a listener object to be notified
- * when waits happen.
+ * Reading is guaranteed wait-free.  Writing is guaranteed wait-free if there is 
+ * only one writing thread.  Writers may sometimes wait but on only each other, 
+ * they do not wait on readers.
+ * 
+ * You can pass a listener object to be notified when waits happen.
  * 
  * @author zlatinb
  */
@@ -52,24 +54,25 @@ public class AtomicBuffer {
 	}
 
 	/**
-	 * Put bytes into this buffer.  If the buffer is full, return false.  This will
-	 * spin until the write succeeds.
+	 * Put bytes into this buffer.  This will spin until at least 1 byte is written
+	 * unless the buffer is full.
+	 * 
      * @param src source byte[] to copy data from
-     * @return true if there was enough space for all bytes
+     * @return how much was written, 0 if buffer was full.
 	 */
-	public boolean put(byte[]src) {
+	public int put(byte[]src) {
 	    return put(src,null);
 	}
 	
 	/**
-	 * put bytes into this buffer.  If the buffer is full, return false
+	 * Put bytes into this buffer.  If the buffer is full, return 0.
 	 * @param src source byte[] to copy data from
-	 * @param listener to notify if the write needs to wait
-	 * @return true if there was enough space for all bytes
+	 * @param listener to notify if the write needs to wait for another write
+	 * @return how much was written, 0 if buffer was full.
 	 */
-	public boolean put(byte[] src, WaitListener listener) {
+	public int put(byte[] src, WaitListener listener) {
 	    // 1st claim space
-	    int startPos;
+	    int startPos, len;
 	    while(true) {
 	        final long s = state.get();
 	        final int read = getRead(s);
@@ -78,13 +81,15 @@ public class AtomicBuffer {
 	        
 	        assert read <= write && write <= claim;
 	        
-	        if (claim + write + src.length > data.length )
-	            return false;
+	        // full, can't write
+	        if (claim == data.length)
+	            return 0;
 	        
-	        final int newClaim = claim + src.length;
+	        final int newClaim = Math.min(data.length, claim + src.length);
 	        final long claimState = encode(read, newClaim, write);
 	        if (state.compareAndSet(s,claimState)) {
 	            startPos = claim;
+	            len = newClaim - startPos;
 	            break;
 	        }
 	    }
@@ -104,11 +109,11 @@ public class AtomicBuffer {
                 continue;
             }
             
-            final int newWrite = write + src.length;
-            System.arraycopy(src,0,data, startPos, src.length);
+            final int newWrite = write + len;
+            System.arraycopy(src,0,data, startPos, len);
             final long newState = encode(read,claim,newWrite);
             if (state.compareAndSet(s,newState))
-                return true;
+                return len;
 	    }
 	}
 
@@ -124,7 +129,7 @@ public class AtomicBuffer {
 	        
 	        long newState;
 	        if (write == claim)
-	            newState = 0;
+	            newState = 0; // read everything in the buffer
 	        else
 	            newState = encode(write,claim,write);
 	        
