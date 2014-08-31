@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * only one writing thread.  Writers may sometimes wait but on only each other, 
  * they do not wait on readers.
  * 
- * In some rare cases, the buffer can full and empty at the same time, i.e. you can't write to it
+ * In some rare cases, the buffer can be full and empty at the same time, i.e. you can't write to it
  * but you can't read from it either.  States like this should last very short periods of time.
  * 
  * COSTS:
@@ -124,6 +124,11 @@ public class AtomicBuffer {
 	    }
 	}
 
+	/**
+	 * Reads data from the buffer and puts it in the destination array.
+	 * @param dest to put data in
+	 * @return how many bytes were written
+	 */
 	public int get(byte[] dest) {
 	    while(true) {
 	        final long s = state.get();
