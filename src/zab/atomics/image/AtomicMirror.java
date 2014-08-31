@@ -9,9 +9,11 @@ import java.util.concurrent.atomic.AtomicLong;
  * 
  * It is fully wait-free.
  * 
- * @author zab
+ * COSTS: writes cost two CAS instructions. Reads cost volatile read.
+ * 
+ * @author zlatinb
  *
- * @param <T>
+ * @param <T> type of the Image
  */
 public class AtomicMirror<T> {
 
@@ -31,6 +33,8 @@ public class AtomicMirror<T> {
      * Updates the image stored in this mirror from the provided object.
      * This call is safe when only used from one thread, and that always has to be
      * the same thread !!!
+     * 
+     * Costs exactly two CAS instructions.
      * 
      * @param from to update from.  It cannot be the same as the initial image!
      */

@@ -9,6 +9,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * only one writing thread.  Writers may sometimes wait but on only each other, 
  * they do not wait on readers.
  * 
+ * COSTS:
+ * Writing costs at least two CAS instructions, unless the buffer is full.
+ * Reading costs at least one CAS instruction, unless the buffer is empty.
+ * 
  * You can pass a listener object to be notified when waits happen.
  * 
  * @author zlatinb
@@ -124,6 +128,9 @@ public class AtomicBuffer {
 	        final int write = getWritten(s);
 	        final int claim = getClaimed(s);
 	        assert read <= write && write <= claim;
+	        
+	        if (read == write)
+	            return 0;
 	        
 	        System.arraycopy(data, read, dest, 0, write - read);
 	        
