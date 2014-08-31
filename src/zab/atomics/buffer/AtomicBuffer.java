@@ -4,6 +4,10 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A buffer that is safe to use by multiple threads.  It has maximum capacity of 2MB.
+ * 
+ * It is guaranteed wait-free if there is only one writing thread.  If there are more,
+ * there can sometimes be a wait.  You can configure the wait to be spin or yield.
+ * 
  * @author zlatinb
  */
 public class AtomicBuffer {
@@ -15,13 +19,17 @@ public class AtomicBuffer {
 	private final AtomicLong state = new AtomicLong();
 
 	private final byte[] data;
+	
+	private final boolean spin;
 
 	/**
 	 * @param sizePow2 size of the buffer as power of 2
 	 */
-	public AtomicBuffer(int sizePow2) {
+	public AtomicBuffer(int sizePow2, boolean spin) {
 		if (sizePow2 > MAX_SIZE)
 			throw new IllegalArgumentException();
+		
+		this.spin = spin;
 		
 		data = new byte[1 << sizePow2];
 
@@ -49,7 +57,7 @@ public class AtomicBuffer {
 	/**
 	 * put bytes into this buffer.  If the buffer is full, return false
 	 * @param src source byte[] to copy data from
-	 * @return true if all bytes were successfully put in the buffer
+	 * @return true if there was enough space for all bytes
 	 */
 	public boolean put(byte[] src) {
 	    // 1st claim space
@@ -81,9 +89,12 @@ public class AtomicBuffer {
             final int claim = getClaimed(s);
             assert read <= write && write <= claim;
             
-            // spin until all other writers catch with us
-            if (write < startPos)
+            // wait until all earlier writers catch up with us
+            if (write < startPos) {
+                if (!spin)
+                    Thread.yield();
                 continue;
+            }
             
             final int newWrite = write + src.length;
             System.arraycopy(src,0,data, startPos, src.length);
