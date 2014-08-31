@@ -52,8 +52,33 @@ public class AtomicBag<T> {
      * @return true if stored, false if there was no space.
      */
     public boolean store(T item) {
+        // find a free slot
+        int slot;
         while(true) {
             final long s = state.get();
+            slot = -1;
+            for (int i = 0; i < 32; i++) {
+                if (get(s,i) != FREE)
+                    continue;
+                slot = i;
+                break;
+            }
+            if (slot < 0)
+                return false;
+            
+            // try to claim it
+            long claimState = claim(s,slot);
+            if (state.compareAndSet(s,claimState))
+                break;
+        }
+        
+        // write
+        storage[slot] = item;
+        while(true) {
+            final long s = state.get();
+            long fullState = full(s,slot);
+            if (state.compareAndSet(s,fullState))
+                return true;
         }
     }
     
