@@ -83,6 +83,55 @@ public class AtomicBag<T> {
     }
     
     /**
+     * Bulk store operation.  More efficient than calling
+     * store() multiple times.
+     * @param items to store
+     * @param num how many of them, starting at 0
+     * @return number actually stored
+     */
+    public int store(final T[] items, int num) {
+        num = Math.min(32,num);
+        
+        // find free slots
+        int slots, found;
+        while(true) {
+            slots = 0;
+            found = 0;
+            final long s = state.get();
+            long newState = s;
+            for(int i = 0; i<32 && num > found ;i++) {
+                if (get(s,i) == FREE) {
+                    slots |= 1 << i;
+                    newState = newState | claim(s, i);
+                    found++;
+                }
+            }
+            if (found == 0)
+                return 0;
+            
+            if (state.compareAndSet(s,newState))
+                break;
+        }
+        
+        // store in slots
+        int stored = 0;
+        long storedMask = 0;
+        for (int i = 0; i < 32 && stored < found; i++) {
+            if ((slots & ( 1 << i)) == 0)
+                continue;
+            storage[i] = items[stored++];
+            storedMask = full(storedMask,i);
+        }
+        
+        // update state
+        while(true) {
+            final long s = state.get();
+            if (state.compareAndSet(s,s | storedMask))
+                return found;
+        }
+    }
+    
+    /**
      * @return number of items in the bag
      */
     public int size() {
