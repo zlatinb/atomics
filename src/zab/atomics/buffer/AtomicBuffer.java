@@ -9,9 +9,12 @@ import java.util.concurrent.atomic.AtomicLong;
  * only one writing thread.  Writers may sometimes wait but on only each other, 
  * they do not wait on readers.
  * 
+ * In some rare cases, the buffer can full and empty at the same time, i.e. you can't write to it
+ * but you can't read from it either.  States like this should last very short periods of time.
+ * 
  * COSTS:
- * Writing costs at least two CAS instructions, unless the buffer is full.
- * Reading costs at least one CAS instruction, unless the buffer is empty.
+ * Writing costs at least two CAS instructions, unless there is no room in the buffer.
+ * Reading costs at least one CAS instruction, unless there is no data in the buffer.
  * 
  * You can pass a listener object to be notified when waits happen.
  * 
@@ -59,20 +62,20 @@ public class AtomicBuffer {
 
 	/**
 	 * Put bytes into this buffer.  This will spin until at least 1 byte is written
-	 * unless the buffer is full.
+	 * unless there is no room in the buffer.
 	 * 
      * @param src source byte[] to copy data from
-     * @return how much was written, 0 if buffer was full.
+     * @return how much was written, 0 if there is no room in the buffer.
 	 */
 	public int put(byte[]src) {
 	    return put(src,null);
 	}
 	
 	/**
-	 * Put bytes into this buffer.  If the buffer is full, return 0.
+	 * Put bytes into this buffer.  If there is no room in the buffer, return 0.
 	 * @param src source byte[] to copy data from
 	 * @param listener to notify if the write needs to wait for another write
-	 * @return how much was written, 0 if buffer was full.
+	 * @return how much was written, 0 if there is no room in the buffer.
 	 */
 	public int put(byte[] src, WaitListener listener) {
 	    // 1st claim space

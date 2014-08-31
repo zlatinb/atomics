@@ -31,8 +31,7 @@ public class AtomicMirror<T> {
     
     /**
      * Updates the image stored in this mirror from the provided object.
-     * This call is safe when only used from one thread, and that always has to be
-     * the same thread !!!
+     * This call is safe when only used from one thread.
      * 
      * Costs exactly two CAS instructions.
      * 
