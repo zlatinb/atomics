@@ -187,7 +187,7 @@ public class AtomicBag<T> {
      * @param dest to store items
      * @param start starting position within dest
      * @param num up to how many to store
-     * @return number of items stored
+     * @return number of items removed
      */
     @SuppressWarnings("unchecked")
     public int removeTo(final T[] dest, final int start, final int num) {
@@ -215,9 +215,62 @@ public class AtomicBag<T> {
      * More efficient than calling remove() repeatedly.
      * 
      * @param dest to store items
-     * @return number of items stored
+     * @return number of items removed
      */
     public int removeTo(T[] dest) {
         return removeTo(dest,0,dest.length);
+    }
+    
+    /**
+     * Retrieves, but does not remove an arbitrary item from the bag
+     * @return an item that is in the bag, null if the bag was empty.
+     */
+    @SuppressWarnings("unchecked")
+    public T get() {
+        final long s = state.get();
+        for (int i = 0; i < 32; i++) {
+            if (get(s,i) != FULL)
+                continue;
+            return (T)storage[i];
+        }
+        return null;
+    }
+    
+    /**
+     * Copies the items currently in the bag  and puts them in the 
+     * destination array, in arbitrary order.
+     * 
+     * More efficient than calling get() repeatedly.
+     * 
+     * @param dest to store items
+     * @param start starting position within dest
+     * @param num up to how many to store
+     * @return number of items copied
+     */
+    @SuppressWarnings("unchecked")
+    public int copyTo(final T[] dest, final int start, final int num) {
+        final long s = state.get();
+        int idx = 0;
+        for(int i = 0; i < 32 && idx < num; i++) {
+            if (get(s,i) != FULL)
+                continue;
+            dest[start + idx++] = (T)storage[i];
+        }
+        return idx;
+    }
+    
+    /**
+     * Copies the items currently in the bag  and puts them in the 
+     * destination array, in arbitrary order.
+     * 
+     * More efficient than calling get() repeatedly.
+     * 
+     * @param dest to store items
+     * @param start starting position within dest
+     * @param num up to how many to store
+     * @return number of items copied
+     */
+    public int copyTo(final T[] dest) {
+        return copyTo(dest,0,dest.length);
     }
 }
