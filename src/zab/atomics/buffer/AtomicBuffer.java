@@ -23,8 +23,10 @@ import java.util.concurrent.atomic.AtomicLong;
 public class AtomicBuffer {
 
 	private static final int MAX_SIZE = 21;
-
-	private final long claimMask, writtenMask, readMask;
+	
+	private static final long READ = (1 << MAX_SIZE) - 1;
+	private static final long CLAIM = READ << MAX_SIZE;
+	private static final long WRITE = CLAIM << MAX_SIZE;
 
 	private final AtomicLong state = new AtomicLong();
 
@@ -38,25 +40,21 @@ public class AtomicBuffer {
 			throw new IllegalArgumentException();
 		
 		data = new byte[1 << sizePow2];
-
-		readMask = (1 << sizePow2) - 1;
-		claimMask = readMask << MAX_SIZE;
-		writtenMask = claimMask << MAX_SIZE;
 	}
 
-	private int getRead(long state) {
-		return (int)(state & readMask);
+	private static int getRead(long state) {
+		return (int)(state & READ);
 	}
 
-	private int getClaimed(long state) {
-		return (int)((state & claimMask) >> MAX_SIZE);
+	private static int getClaimed(long state) {
+		return (int)((state & CLAIM) >> MAX_SIZE);
 	}
 
-	private int getWritten(long state) {
-		return (int)((state & writtenMask) >> (MAX_SIZE << 1));
+	private static int getWritten(long state) {
+		return (int)((state & WRITE) >> (MAX_SIZE << 1));
 	}
 	
-	private long encode(int read, int claim, int write) {
+	private static long encode(int read, int claim, int write) {
 	    return read | (claim << MAX_SIZE) | (write << (MAX_SIZE <<1));
 	}
 
