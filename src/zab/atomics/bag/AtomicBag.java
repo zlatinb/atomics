@@ -82,6 +82,16 @@ public class AtomicBag<T> {
         }
     }
     
+    /**
+     * Puts the items currently in the bag in the destination array, in arbitrary order.
+     * @param dest to store items
+     * @return number of items stored
+     */
+    public int get(T[] dest) {
+        // TODO: implement
+        return 0;
+    }
+    
     public static void main(String[] ar) {
         AtomicBag<?> as = new AtomicBag<Object>();
         System.out.printf("%x\n",as.get(12,1));
