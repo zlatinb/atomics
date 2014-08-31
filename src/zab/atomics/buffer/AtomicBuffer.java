@@ -6,7 +6,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * A buffer that is safe to use by multiple threads.  It has maximum capacity of 2MB.
  * 
  * It is guaranteed wait-free if there is only one writing thread.  If there are more,
- * there can sometimes be a wait.  You can configure the wait to be spin or yield.
+ * there can sometimes be a wait.  You can pass a listener object to be notified
+ * when waits happen.
  * 
  * @author zlatinb
  */
@@ -20,16 +21,12 @@ public class AtomicBuffer {
 
 	private final byte[] data;
 	
-	private final boolean spin;
-
 	/**
 	 * @param sizePow2 size of the buffer as power of 2
 	 */
-	public AtomicBuffer(int sizePow2, boolean spin) {
+	public AtomicBuffer(int sizePow2) {
 		if (sizePow2 > MAX_SIZE)
 			throw new IllegalArgumentException();
-		
-		this.spin = spin;
 		
 		data = new byte[1 << sizePow2];
 
@@ -55,11 +52,22 @@ public class AtomicBuffer {
 	}
 
 	/**
+	 * Put bytes into this buffer.  If the buffer is full, return false.  This will
+	 * spin until the write succeeds.
+     * @param src source byte[] to copy data from
+     * @return true if there was enough space for all bytes
+	 */
+	public boolean put(byte[]src) {
+	    return put(src,null);
+	}
+	
+	/**
 	 * put bytes into this buffer.  If the buffer is full, return false
 	 * @param src source byte[] to copy data from
+	 * @param listener to notify if the write needs to wait
 	 * @return true if there was enough space for all bytes
 	 */
-	public boolean put(byte[] src) {
+	public boolean put(byte[] src, WaitListener listener) {
 	    // 1st claim space
 	    int startPos;
 	    while(true) {
@@ -91,8 +99,8 @@ public class AtomicBuffer {
             
             // wait until all earlier writers catch up with us
             if (write < startPos) {
-                if (!spin)
-                    Thread.yield();
+                if (listener != null)
+                    listener.onWait();
                 continue;
             }
             
