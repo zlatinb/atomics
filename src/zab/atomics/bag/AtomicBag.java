@@ -158,7 +158,7 @@ public class AtomicBag<T> {
      * @return an arbitrary item from the bag, null if empty
      */
     @SuppressWarnings("unchecked")
-    public T get() {
+    public T remove() {
         while(true) {
             final long s = state.get();
             int slot = -1;
@@ -179,22 +179,26 @@ public class AtomicBag<T> {
     }
     
     /**
-     * Puts the items currently in the bag in the destination array, in arbitrary order.
-     * More efficient than calling get() repeatedly.
+     * Removes the items currently in the bag  and puts them in the 
+     * destination array, in arbitrary order.
+     * 
+     * More efficient than calling remove() repeatedly.
      * 
      * @param dest to store items
+     * @param start starting position within dest
+     * @param num up to how many to store
      * @return number of items stored
      */
     @SuppressWarnings("unchecked")
-    public int get(T[] dest) {
+    public int removeTo(final T[] dest, final int start, final int num) {
         while(true) {
             final long s = state.get();
             long newState = s;
             int idx = 0;
-            for(int i = 0; i < 32; i++) {
+            for(int i = 0; i < 32 && idx < num; i++) {
                 if (get(s,i) != FULL)
                     continue;
-                dest[idx++] = (T)storage[i];
+                dest[start + idx++] = (T)storage[i];
                 newState = free(newState,i);
             }
             if (idx == 0)
@@ -202,5 +206,18 @@ public class AtomicBag<T> {
             if (state.compareAndSet(s,newState))
                 return idx;
         }
+    }
+    
+    /**
+     * Removes the items currently in the bag  and puts them in the 
+     * destination array, in arbitrary order.
+     * 
+     * More efficient than calling remove() repeatedly.
+     * 
+     * @param dest to store items
+     * @return number of items stored
+     */
+    public int removeTo(T[] dest) {
+        return removeTo(dest,0,dest.length);
     }
 }
