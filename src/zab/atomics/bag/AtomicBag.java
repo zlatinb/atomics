@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * An atomic, lock-free and wait-free storage of items.  It can store up to 32 items.
  * 
- * The bag keeps references to the stored items after they are removed.  Use it
+ * The bag may keep references to up to 32 items after they have been removed.  Use it
  * only for objects you do not expect to be garbage-collected.
  *  
  * @author zlatinb
@@ -83,18 +83,65 @@ public class AtomicBag<T> {
     }
     
     /**
+     * @return number of items in the bag
+     */
+    public int size() {
+        final long s = state.get();
+        int size = 0;
+        for (int i = 0; i < 32; i++) {
+            if (get(s,i) == FULL)
+                size++;
+        }
+        return size;
+    }
+    
+    /**
+     * @return an arbitrary item from the bag, null if empty
+     */
+    @SuppressWarnings("unchecked")
+    public T get() {
+        while(true) {
+            final long s = state.get();
+            int slot = -1;
+            for (int i = 0; i < 32; i++) {
+                if (get(s,i) != FULL)
+                    continue;
+                slot = i;
+                break;
+            }
+            if (slot == -1)
+                return null;
+            
+            T item = (T)storage[slot];
+            long newState = free(s,slot);
+            if (state.compareAndSet(s,newState))
+                return item;
+        }
+    }
+    
+    /**
      * Puts the items currently in the bag in the destination array, in arbitrary order.
+     * More efficient than calling get() repeatedly.
+     * 
      * @param dest to store items
      * @return number of items stored
      */
+    @SuppressWarnings("unchecked")
     public int get(T[] dest) {
-        // TODO: implement
-        return 0;
+        while(true) {
+            final long s = state.get();
+            long newState = s;
+            int idx = 0;
+            for(int i = 0; i < 32; i++) {
+                if (get(s,i) != FULL)
+                    continue;
+                dest[idx++] = (T)storage[i];
+                newState = free(newState,i);
+            }
+            if (idx == 0)
+                return 0;
+            if (state.compareAndSet(s,newState))
+                return idx;
+        }
     }
-    
-    public static void main(String[] ar) {
-        AtomicBag<?> as = new AtomicBag<Object>();
-        System.out.printf("%x\n",as.get(12,1));
-    }
-
 }
