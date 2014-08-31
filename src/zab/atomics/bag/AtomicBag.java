@@ -8,6 +8,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * The bag may keep references to up to 32 items after they have been removed.  Use it
  * only for objects you do not expect to be garbage-collected.
  * 
+ * In some very rare cases, the bag can be full and empty at the same time, i.e. you cannot
+ * add any items to it, but you can't take any items out either.  States like this should last
+ * very short periods of time.
+ * 
  * COSTS: 
  * the store(..) operations cost at least two CAS instructions.
  * the remove(..) operations cost at least one CAS instruction.
@@ -54,7 +58,7 @@ public class AtomicBag<T> {
     
     /**
      * Stores an item in the bag, if there is space.
-     * Costs at least two CAS instructions, unless the bag is full.
+     * Costs at least two CAS instructions, unless there is no room in the bag.
      * 
      * @param item to store
      * @return true if stored, false if there was no space.
@@ -94,7 +98,7 @@ public class AtomicBag<T> {
      * Bulk store operation.  More efficient than calling
      * store() multiple times.
      * 
-     * Costs at least two CAS instructions unless the bag was full.
+     * Costs at least two CAS instructions unless there is no room in the bag.
      * 
      * @param items to store in the bag
      * @return how many were stored
@@ -107,7 +111,7 @@ public class AtomicBag<T> {
      * Bulk store operation.  More efficient than calling
      * store() multiple times.
      * 
-     * Costs at least two CAS instructions unless the bag was full.
+     * Costs at least two CAS instructions unless there is no room in the bag.
      * 
      * @param items to store
      * @param start index within the array where to start
@@ -172,7 +176,7 @@ public class AtomicBag<T> {
     /**
      * Removes an item from the bag.
      * 
-     * Costs at least one CAS instruction unless the bag is empty.
+     * Costs at least one CAS instruction unless there are no items in the bag.
      * 
      * @return an arbitrary item from the bag, null if empty
      */
@@ -203,7 +207,7 @@ public class AtomicBag<T> {
      * 
      * More efficient than calling remove() repeatedly.
      * 
-     * Costs at least one CAS instruction unless the bag is empty.
+     * Costs at least one CAS instruction unless there are no items in the bag.
      * 
      * @param dest to store items
      * @param start starting position within dest
@@ -235,7 +239,7 @@ public class AtomicBag<T> {
      * 
      * More efficient than calling remove() repeatedly.
      * 
-     * Costs at least one CAS instruction unless the bag is empty.
+     * Costs at least one CAS instruction unless there are no items in the bag.
      * 
      * @param dest to store items
      * @return number of items removed
@@ -246,7 +250,7 @@ public class AtomicBag<T> {
     
     /**
      * Retrieves, but does not remove an arbitrary item from the bag
-     * @return an item that is in the bag, null if the bag was empty.
+     * @return an item that is in the bag, null if there are no items in the bag.
      */
     @SuppressWarnings("unchecked")
     public T get() {
