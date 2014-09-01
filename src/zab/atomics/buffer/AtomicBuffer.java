@@ -16,6 +16,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * Writing costs at least two CAS instructions, unless there is no room in the buffer.
  * Reading costs at least one CAS instruction, unless there is no data in the buffer.
  * 
+ * TODO: explain why the size of the effective capacity buffer is really "up to" 2MB and
+ * how an effective capacity of 1MB can be achieved by utilizing the extra available bit
+ * 
  * @author zlatinb
  */
 public class AtomicBuffer {
