@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * 
  * Reading is guaranteed wait-free.  Writing is guaranteed wait-free if there is 
  * only one writing thread.  Writers may sometimes wait but on only each other, 
- * they do not wait on readers.
+ * they do not wait on readers.   You can pass a listener object to be notified when waits happen.
  * 
  * In some rare cases, the buffer can be full and empty at the same time, i.e. you can't write to it
  * but you can't read from it either.  States like this should last very short periods of time.
@@ -15,8 +15,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * COSTS:
  * Writing costs at least two CAS instructions, unless there is no room in the buffer.
  * Reading costs at least one CAS instruction, unless there is no data in the buffer.
- * 
- * You can pass a listener object to be notified when waits happen.
  * 
  * @author zlatinb
  */
