@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * A buffer that is safe to use by multiple threads.  It has maximum capacity of 2^21 = 2MB.
  * 
  * Reading is guaranteed wait-free.  Writing is guaranteed wait-free if there is 
- * only one writing thread.  Writers may sometimes wait but on only each other, 
+ * only one writing thread.  Writers may sometimes wait but only on each other, 
  * they do not wait on readers.   You can pass a listener object to be notified when waits happen.
  * 
  * In some rare cases, the buffer can be full and empty at the same time, i.e. you can't write to it
