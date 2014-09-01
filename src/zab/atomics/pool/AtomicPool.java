@@ -41,4 +41,31 @@ public class AtomicPool<T> {
                 return;
         }
     }
+    
+    /**
+     * Stores or returns many items.  More efficient than calling
+     * release repeatedly
+     * 
+     * @param items array containing items to return
+     * @param start start position within the array
+     * @param num number of items to return
+     */
+    public void release(Wrapper<T>[] items, int start, int num) {
+        if (num == 0)
+            return;
+        if (num == 1) {
+            release(items[start]);
+            return;
+        }
+        
+        for (int i = start; i < start + num - 1; i++)
+            items[i].setNext(items[i+1]);
+        
+        while(true) {
+            Wrapper<T> f = first.get();
+            items[start + num].setNext(f);
+            if (first.compareAndSet(f,items[start]))
+                return;
+        }
+    }
 }
