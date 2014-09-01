@@ -3,10 +3,12 @@ package zab.atomics.pool;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * An atomic pool of objects.  It is based on an inverted list.
+ * An atomic pool of objects.  It is based on an freelist.
  * 
  * The pool has no maximum capacity and starts off empty.  You need to load it
  * with objects you want pooled by calling the "release" method.
+ * 
+ * COSTS: acquire and release cost at least one CAS instruction.
  * 
  * @author zlatinb
  *
