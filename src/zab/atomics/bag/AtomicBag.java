@@ -145,7 +145,7 @@ public class AtomicBag<T> {
         
         // store in slots
         int stored = 0;
-        long storedMask = 0;
+        long storedMask = 0xFFFFFFFFFFFFFFFFL;
         for (int i = 0; i < 32 && stored < found; i++) {
             if ((slots & ( 1 << i)) == 0)
                 continue;
@@ -156,7 +156,7 @@ public class AtomicBag<T> {
         // update state
         while(true) {
             final long s = state.get();
-            if (state.compareAndSet(s,s | storedMask))
+            if (state.compareAndSet(s,s & storedMask))
                 return found;
         }
     }
@@ -183,7 +183,7 @@ public class AtomicBag<T> {
      */
     @SuppressWarnings("unchecked")
     public T remove() {
-        // first find a full item
+        // first find a full slot
         int slot;
         T item;
         while(true) {
@@ -230,19 +230,40 @@ public class AtomicBag<T> {
      */
     @SuppressWarnings("unchecked")
     public int removeTo(final T[] dest, final int start, final int num) {
+        // find the full slots
+        int slots;
+        int idx;
         while(true) {
+            slots = 0;
             final long s = state.get();
             long newState = s;
-            int idx = 0;
+            idx = 0;
             for(int i = 0; i < 32 && idx < num; i++) {
                 if (get(s,i) != FULL)
                     continue;
                 dest[start + idx++] = (T)storage[i];
                 newState = free(newState,i);
+                slots |= (1 << i);
             }
             if (idx == 0)
                 return 0;
             if (state.compareAndSet(s,newState))
+                break;
+        }
+        
+        // null them
+        long freedMask = 0xFFFFFFFFFFFFFFFFL;
+        for (int i = 0; i < 32; i++) {
+            if ((slots & (1 << i)) == 0)
+                continue;
+            storage[i] = null;
+            freedMask = free(freedMask,i);
+        }
+        
+        // mark them as free
+        while(true) {
+            final long s = state.get();
+            if (state.compareAndSet(s, s & freedMask))
                 return idx;
         }
     }

@@ -138,7 +138,7 @@ public class AtomicLeakyBag<T> {
         
         // store in slots
         int stored = 0;
-        long storedMask = 0;
+        long storedMask = 0xFFFFFFFFFFFFFFFFL;
         for (int i = 0; i < 32 && stored < found; i++) {
             if ((slots & ( 1 << i)) == 0)
                 continue;
@@ -149,7 +149,7 @@ public class AtomicLeakyBag<T> {
         // update state
         while(true) {
             final long s = state.get();
-            if (state.compareAndSet(s,s | storedMask))
+            if (state.compareAndSet(s,s & storedMask))
                 return found;
         }
     }
