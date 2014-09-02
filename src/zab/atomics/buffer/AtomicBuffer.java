@@ -3,7 +3,7 @@ package zab.atomics.buffer;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * A buffer that is safe to use by multiple threads.  It has maximum capacity of 2^21 = 2MB.
+ * A buffer that is safe to use by multiple threads.  It has maximum capacity of "up to" 2^21 = 2MB.
  * 
  * Reading is guaranteed wait-free.  Writing is guaranteed wait-free if there is 
  * only one writing thread.  Writers may sometimes wait but only on each other, 
@@ -16,8 +16,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * Writing costs at least two CAS instructions, unless there is no room in the buffer.
  * Reading costs at least one CAS instruction, unless there is no data in the buffer.
  * 
- * TODO: explain why the size of the effective capacity buffer is really "up to" 2MB and
- * how an effective capacity of "at least" 1MB can be achieved by utilizing the extra available bit
+ * TODO: make it a circular buffer with real capacity of 2MB
  * 
  * @author zlatinb
  */
