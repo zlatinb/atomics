@@ -19,6 +19,13 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class AtomicBag<T> {
     
+    /*
+     * Implementation:
+     * The bag is a long value divided into 32 slots, 2 bits each.
+     * Each slot is a state machine that goes:
+     * FREE -> CLAIM -> FULL -> REMOVING -> FREE
+     */
+    
     private static final int FREE = 0;
     private static final int CLAIM = 1;
     private static final int FULL = 2;
