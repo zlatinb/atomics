@@ -3,26 +3,23 @@ package zab.atomics.bag;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * An atomic, lock-free and wait-free storage of items.  It can store up to 32 items.
+ * Same as the AtomicBag, but more efficient when removing elements.
  * 
- * In some very rare cases, the bag can be full and empty at the same time, i.e. you cannot
- * add any items to it, but you can't take any items out either.  States like this should last
- * very short periods of time.
+ * The bag may keep references to up to 32 items after they have been removed.  Use it
+ * only for objects you do not expect to be garbage-collected.
  * 
- * COSTS: 
- * the store(..) and remove(..) operations cost at least two CAS instructions.
- * the copyTo and get() operations cost a single volatile read.
+ * COSTS:
+ * same as the AtomicBag, except remove(..) operations cost one CAS instruction. 
  *  
  * @author zlatinb
  *
  * @param <T> type of the items stored
  */
-public class AtomicBag<T> {
+public class AtomicLeakyBag<T> {
     
     private static final int FREE = 0;
     private static final int CLAIM = 1;
     private static final int FULL = 2;
-    private static final int REMOVING = 3;
     
     private final Object[] storage = new Object[32];
     
@@ -46,10 +43,6 @@ public class AtomicBag<T> {
     private static long full(long state, int i) {
         long freed = free(state,i);
         return freed | (FULL << (i <<1));
-    }
-    
-    private static long removing(long state, int i) {
-        return state | (REMOVING << (i << 1));
     }
     
     private static int get(long state, final int i) {
@@ -177,18 +170,15 @@ public class AtomicBag<T> {
     /**
      * Removes an item from the bag.
      * 
-     * Costs at least two CAS instructions unless there are no items in the bag.
+     * Costs at least one CAS instruction unless there are no items in the bag.
      * 
      * @return an arbitrary item from the bag, null if empty
      */
     @SuppressWarnings("unchecked")
     public T remove() {
-        // first find a full item
-        int slot;
-        T item;
         while(true) {
             final long s = state.get();
-            slot = -1;
+            int slot = -1;
             for (int i = 0; i < 32; i++) {
                 if (get(s,i) != FULL)
                     continue;
@@ -198,19 +188,9 @@ public class AtomicBag<T> {
             if (slot == -1)
                 return null;
             
-            item = (T)storage[slot];
-            long newState = removing(s,slot);
+            T item = (T)storage[slot];
+            long newState = free(s,slot);
             if (state.compareAndSet(s,newState))
-                break;
-        }
-        
-        // null the slot
-        storage[slot] = null;
-        
-        // mark it as empty
-        while(true) {
-            final long s = state.get();
-            if (state.compareAndSet(s,free(s,slot)))
                 return item;
         }
     }
