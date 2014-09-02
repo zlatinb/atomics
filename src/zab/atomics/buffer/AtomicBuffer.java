@@ -21,6 +21,20 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author zlatinb
  */
 public class AtomicBuffer {
+    
+    /*
+     * Implementation:
+     * 
+     * The buffer is a long value, split into three counters, 21 bits each.
+     * (I haven't figured out what to do with the extra bit)
+     * 
+     * The claimed counter increments before a write is about to happen.
+     * The written counter increments when a contiguous write occurs
+     * The read counter increments when a read happens.
+     * 
+     * Right now all counters go to 0 when the read head reaches the claimed head,
+     * but I'll soon rewrite it to be a circular buffer.
+     */
 
 	private static final int MAX_SIZE = 21;
 	
