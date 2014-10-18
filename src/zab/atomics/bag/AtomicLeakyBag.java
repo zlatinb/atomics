@@ -14,6 +14,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author zlatinb
  *
  * @param <T> type of the items stored
+ *
+ * (The bag can be extended to hold up to 41 elements. Guess how)
  */
 public class AtomicLeakyBag<T> {
     
